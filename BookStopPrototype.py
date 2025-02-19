@@ -1,6 +1,6 @@
 import os
 import openai
-import faiss
+from langchain.vectorstores import FAISS
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
@@ -68,7 +68,7 @@ def retrieve_documents(query, index, documents, top_k=3, threshold=0.7):
 
 # Main chat loop
 def main():
-    documents = load_data("dataset\available_books.csv")
+    documents = load_data("dataset/available_books.csv")
     index = init_vector_store(documents)
     if index is None:
         print("Exiting: No books to process.")
