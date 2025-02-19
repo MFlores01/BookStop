@@ -104,14 +104,71 @@ Current library inventory:
 
 
 #  Load and preprocess data
-def load_data(csv_path):
-    df = pd.read_csv(csv_path)
-    df.columns = df.columns.str.strip().str.lower()  
+def get_llm_response(prompt, max_tokens=100):
+    """Helper function to get LLM responses"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=max_tokens
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error getting LLM response: {e}")
+        return "N/A"
 
+def fill_missing_values(df):
+    """Fill missing metadata using LLM inference"""
+    for idx, row in df.iterrows():
+        # Fill missing authors
+        if pd.isna(row['creators']) or row['creators'].strip() in ['', 'N/A']:
+            prompt = f"""Identify the most likely author for the book titled "{row['title']}". 
+                       Respond only with the author's full name or 'N/A' if unknown."""
+            df.at[idx, 'creators'] = get_llm_response(prompt)
+            
+        # Fill missing genres/tags
+        if pd.isna(row.get('tags')) or row['tags'].strip() in ['', 'N/A']:
+            prompt = f"""Suggest 3-5 appropriate literary genres for the book "{row['title']}". 
+                       Respond only with comma-separated values or 'N/A' if unknown."""
+            df.at[idx, 'tags'] = get_llm_response(prompt)
+            
+        # Fill missing collection
+        if pd.isna(row.get('collection')) or row['collection'].strip() in ['', 'N/A']:
+            author = row['creators'] if not pd.isna(row['creators']) else 'unknown author'
+            prompt = f"""Suggest an appropriate collection/category for the book "{row['title']}" by {author}. 
+                       Respond only with the collection name or 'N/A' if unknown."""
+            df.at[idx, 'collection'] = get_llm_response(prompt)
+    
+    return df
+
+def load_data(csv_path):
+    """Load and preprocess data with LLM-based cleaning"""
+    df = pd.read_csv(csv_path)
+    
+    # Clean column names
+    df.columns = df.columns.str.strip().str.lower()
+    
+    # Preserve unique identifiers (call_number, ddc, lcc) without modification
+    required_columns = ['title', 'creators', 'collection', 'tags']
+    for col in required_columns:
+        if col not in df.columns:
+            df[col] = 'N/A'
+    
+    # Fill missing values using LLM
+    df = fill_missing_values(df)
+    
+    # Create document string
     df["document"] = df.apply(
-        lambda row: f"TITLE: {row['title']} | AUTHOR: {row['creators']} | Genre: {row.get('tags', 'N/A')}",
+        lambda row: (
+            f"TITLE: {row['title']} | "
+            f"AUTHOR: {row['creators']} | "
+            f"Collection: {row['collection']} | "
+            f"Genre: {row['tags']}"
+        ),
         axis=1
     )
+    
     return df["document"].tolist()
 
 # Initialize vector store
