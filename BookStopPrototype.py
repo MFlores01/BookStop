@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 # Load environment variables
 load_dotenv()
