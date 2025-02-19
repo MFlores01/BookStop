@@ -4,15 +4,8 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain.schema.runnable import RunnableLambda, RunnableSequence, RunnableBranch
 from langchain_openai import ChatOpenAI
 
-from bookstop_modules import qc_VerifyQuery
+from bookstop_modules import questionclassifier
 
-first = RunnableBranch(
-
-)
 query = {"query": input('>>: ')}
-result = qc_VerifyQuery.chain_verifyQuery.invoke(query)
-second = RunnableBranch(
-
-)
+result = questionclassifier.questionClassifier.invoke(query)
 print(result)
-chain = first | second
