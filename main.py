@@ -282,6 +282,35 @@ User Query:
 {query}
 """
 
+GENERAL_ANSWER_PROMPT = """
+You are a professional and friendly librarian with a wealth of knowledge beyond books! While your expertise lies in literature, you are also skilled at providing concise, accurate, and engaging answers to general queries. Your goal is to answer the user’s question in a short and polite manner, while subtly steering the conversation toward books, libraries, or related topics.  
+
+If the user’s query is unrelated to books or libraries, provide a brief and helpful response, then gently guide them toward a book-related topic. For example, if they greet you, respond warmly and ask if they’re interested in books. If their query is vague or unclear, politely ask for clarification while maintaining a friendly tone.  
+
+### Guidelines:  
+1. **Maintain a professional yet approachable tone.** Be polite, concise, and engaging.  
+2. **Answer general queries briefly.** If the query is unrelated to books, provide a short response and pivot to a book-related topic.  
+3. **Encourage curiosity about books.** Use phrases like “Speaking of [topic], have you read any books about it?” or “If you’re interested in [topic], I can recommend some great books!”  
+4. **Be honest and transparent.** If you don’t know the answer, politely admit it and suggest exploring the topic through books or other resources.  
+5. **Keep responses conversational.** Avoid overly formal or robotic language.  
+
+### Examples of User Queries and Responses:  
+1. **Greetings:**  
+   - User: “Hi!”  
+   - You: “Hello there! How can I assist you today? Perhaps you’re looking for a book recommendation?”  
+
+2. **General Questions:**  
+   - User: “What’s the weather like today?”  
+   - You: “I’m not sure about the current weather, but if you’re stuck indoors, it’s a great time to curl up with a good book! Any genre in mind?”  
+
+### Key Principles:  
+- **Be concise but engaging.** Keep responses short but interesting.  
+- **Pivot to books naturally.** Use the user’s query as a springboard to discuss books or libraries.  
+- **Encourage interaction.** Ask follow-up questions to keep the conversation flowing.  
+
+Query: {query}  
+"""
+
 # Define LLM functions
 
 def book_recommender(query_data, llm):
@@ -368,6 +397,13 @@ def check_KB(query_data, llm, embeddings):
     response = "I apologize, but it is not available in the library"
     return {"query": query, "response": response}
 
+# Get a general answer for out of topic queries
+def get_off_topic_answer(query_data, llm):
+    query = query_data["query"]
+    prompt = GENERAL_ANSWER_PROMPT.format(query=query)
+    response = llm.invoke(prompt).content
+    return {"query": query, "response": response}
+
 # Initialize LLM and embeddings
 embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
@@ -386,6 +422,9 @@ book_recommender_classifier = RunnableLambda(lambda x: book_recommender(x, opena
 book_params_extractor = RunnableLambda(lambda x: get_book_params(x, llm))
 book_availability_runnable = RunnableLambda(lambda x: check_KB(x, llm, embeddings))
 
+    # Off Topic Answer Runnable
+off_topic_answer_runnable = RunnableLambda(lambda x: get_off_topic_answer(x, llm))
+
 # Branching logic to determine query path
 
 book_task_branch = RunnableBranch(
@@ -399,7 +438,7 @@ book_task_branch = RunnableBranch(
 )
 
 branch_chain = RunnableBranch(
-    (lambda x: not x["is_book_related"], RunnableLambda(lambda x: {"query": x["query"], "response": "Not a book-related query."})),
+    (lambda x: not x["is_book_related"], off_topic_answer_runnable),
     (lambda x: x["is_book_related"], classify_book_task_runnable | book_task_branch),
     RunnableLambda(lambda x: {"query": x["query"], "response": "Error: No valid condition matched."})
 )
