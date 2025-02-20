@@ -238,13 +238,13 @@ def book_recommender(query_data, llm):
 
     prompt = BOOK_RECOMMENDER_PROMPT.format(query=query, context=context)
     response = llm.invoke(prompt).content.strip()
-    return {"query": query, "book_recommender": response}
+    return {"query": query, "response": response}
 
 def book_talk(query_data, llm):
     query = query_data["query"]
     prompt = BOOK_TALK_PROMPT.format(query=query, context=context)
     response = llm.invoke(prompt).content.strip()
-    return {"query": query, "book_talk": response}
+    return {"query": query, "response": response}
     #return response
 
 def is_book_related(query_data, llm):
@@ -321,5 +321,5 @@ while True:
         break
     
     result = chain.invoke({"query": query})
-    print(result)
+    print(result['response'])
     
