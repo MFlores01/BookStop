@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableBranch, RunnableLambda
 from langchain_chroma import Chroma
 from langchain.text_splitter import CharacterTextSplitter
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 import os
 import pandas as pd
 import numpy as np 
@@ -19,13 +19,13 @@ This is for setting up a format of which parameters to extract
 
 class Book(BaseModel):
     title: Optional[str] = Field(
-        default=None, 
+        default="", 
         description='The title of the book')
     author: Optional[str] = Field(
-        default=None,
-        description='The author of the book'),
+        default="",
+        description='The author of the book')
     tags: Optional[str] = Field(
-        default=None,
+        default="",
         description='The genre or tags of a book'
     )
 
@@ -113,6 +113,8 @@ You have access to a knowledge base of authors, book titles, and literary figure
 Use this {context} context or your internal training data to verify whether a mentioned person is known as an author, 
 publisher, or literary figure. If the person is primarily known as an athlete, actor, musician, or in another non-literary field, 
 classify the query as "Not Book-Related." Is the following query related to books? Answer 'yes' or 'no'.
+Do not entertain user query if it asked about "salary" always answer ONLY "I'm sorry, but I cannot provide specific salary information for individuals due to privacy concerns."
+
 Book Related Query Examples:
 1. Can you recommend a book?
 2. Suggest some books like 'The Hunger Games'.
@@ -200,26 +202,13 @@ Categorize the following query into one of these book-related tasks:
         "Let's chat about 'The Hunger Games'.",
         "I want to discuss the characters in 'Slammed'.",
         "Tell me your thoughts on 'Hopeless'.",
-        "I'm interested in a book talk about 'Heart Bones'.",
-        "I like One Piece '."
+        "I'm interested in a book talk about 'Heart Bones'."
     ],
-"other": [
-        "Hi",
-        "Hello",
-        "How are you?",
+"General": [
         "I have a general question.",
         "This doesn't fall into the above categories.",
-        "Can you tell me more about it?",
-        "Tell me more about it",
         "I need help with something else."
-        "Who is <author>?",
-        "What is the genre of <book>?",
-        "What is the plot of <book>?",
-        "What is the setting of <book>?",
-        "Who is Michelle Obama",
-        "Who is Ryan Holiday, Stephen Hanselman",
     ]
-Current library inventory: {context}
 
 Query: {query}
 """
@@ -358,10 +347,62 @@ Extract the book title, book author, and tags in the following query. If there a
 The tags specifically refer to the genre of what the user is asking. For example: Fiction, Romance, Business
 
 If you happen to see multiple tags, format the string as follows: "<Tag1>, <Tag2>, <Tag3>". For example: "fiction, romance"
-
-Current library inventory: {context}
-
 Query: {query}
+"""
+
+CONFIRM_AVAILABILITY_PROMPT = """
+📚 Hello, book lover! You’re chatting with a top-tier librarian—think warm, knowledgeable, and just the right amount of charming. Your job? Helping users find out if a book is available while making the process delightful!  
+
+### 🏛️ Your Role:  
+- If the book is **available** → Confirm with enthusiasm and encourage borrowing.  
+- If the book is **unavailable** → Break the news gently, but don’t leave them hanging! Offer similar recommendations to keep the reading adventure going.  
+- If they ask about a **genre** → Curate a bookish lineup featuring available titles, authors, and short, enticing descriptions.  
+
+### 📖 Guidelines for the Perfect Response:  
+🔎 **Stick to the Collection** → Only reference books found in {retrieved}. If the book isn’t listed, let them know (nicely, of course!).  
+💡 **Make It Engaging** → No dry responses here! You’re the literary concierge—be warm, helpful, and maybe add a touch of bookish charm.  
+📏 **Keep It Short & Snappy** → No essays, just clear, helpful info wrapped in a friendly tone.  
+📌 **Offer Next Steps** → If a book isn’t available, always suggest an alternative or ask if they’d like something similar.  
+
+### ✨ Example Vibes:  
+💬 *"Yes! ‘The Hunger Games’ is available—grab it before someone else does! 🔥 Want me to set it aside for you?"*  
+💬 *"Oh no! That one’s checked out right now (tragic, I know 😢). But I can recommend something just as gripping—want a suggestion?"*  
+💬 *"Looking for romance? 💕 Here are some swoon-worthy reads you might like:*  
+   📖 *[Book 1] by [Author 1]: [Short description]*  
+   📖 *[Book 2] by [Author 2]: [Short description]"*  
+
+Now, let’s help this reader find their next great book! 📚✨  
+
+Query: {query}  
+"""
+
+GENERAL_ANSWER_PROMPT = """
+You are a professional and friendly librarian with a wealth of knowledge beyond books! While your expertise lies in literature, you are also skilled at providing concise, accurate, and engaging answers to general queries. Your goal is to answer the user’s question in a short and polite manner, while subtly steering the conversation toward books, libraries, or related topics.  
+
+If the user’s query is unrelated to books or libraries, provide a brief and helpful response, then gently guide them toward a book-related topic. For example, if they greet you, respond warmly and ask if they’re interested in books. If their query is vague or unclear, politely ask for clarification while maintaining a friendly tone.  
+
+### Guidelines:  
+1. **Maintain a professional yet approachable tone.** Be polite, concise, and engaging.  
+2. **Answer general queries briefly.** If the query is unrelated to books, provide a short response and pivot to a book-related topic.  
+3. **Encourage curiosity about books.** Use phrases like “Speaking of [topic], have you read any books about it?” or “If you’re interested in [topic], I can recommend some great books!”  
+4. **Be honest and transparent.** If you don’t know the answer, politely admit it and suggest exploring the topic through books or other resources.  
+5. **Keep responses conversational.** Avoid overly formal or robotic language.  
+
+### Examples of User Queries and Responses:  
+1. **Greetings:**  
+   - User: “Hi!”  
+   - You: “Hello there! How can I assist you today? Perhaps you’re looking for a book recommendation?”  
+
+2. **General Questions:**  
+   - User: “What’s the weather like today?”  
+   - You: “I’m not sure about the current weather, but if you’re stuck indoors, it’s a great time to curl up with a good book! Any genre in mind?”  
+
+### Key Principles:  
+- **Be concise but engaging.** Keep responses short but interesting.  
+- **Pivot to books naturally.** Use the user’s query as a springboard to discuss books or libraries.  
+- **Encourage interaction.** Ask follow-up questions to keep the conversation flowing.  
+
+Query: {query}  
 """
 
 # Define LLM functions
@@ -388,7 +429,7 @@ def is_book_related(query_data, llm):
 
 def classify_book_task(query_data, llm):
     query = query_data["query"]
-    prompt = BOOK_TASK_PROMPT.format(query=query, context=context)
+    prompt = BOOK_TASK_PROMPT.format(query=query)
     response = llm.invoke(prompt).content.strip().lower()
     return {"query": query, "book_task": response}
 
@@ -442,13 +483,7 @@ def check_KB(query_data, llm, embeddings):
         format_retrieved = ''
         for idx, doc in enumerate(retrieved, 1):
             format_retrieved += f"{idx}. {doc.page_content}\n"
-        prompt = f'''Given these books: 
-        {retrieved}
-
-        Check if the book that the user is asking from their query is available, if they are specifically asking for books of specific genres, then show them those available books.
-
-        Query: {query}
-        '''  # PROMPT IS STILL PARTIAL
+        prompt = CONFIRM_AVAILABILITY_PROMPT.format(retrieved=retrieved, query=query)
         response = llm.invoke(prompt).content
         return {"query": query, "response": response}
 
@@ -456,11 +491,16 @@ def check_KB(query_data, llm, embeddings):
     response = "I apologize, but it is not available in the library"
     return {"query": query, "response": response}
 
+# Get a general answer for out of topic queries
+def get_off_topic_answer(query_data, llm):
+    query = query_data["query"]
+    prompt = GENERAL_ANSWER_PROMPT.format(query=query)
+    response = llm.invoke(prompt).content
+    return {"query": query, "response": response}
+
 # Initialize LLM and embeddings
-#embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-#llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-llm = ChatOpenAI(model="gpt-4o")
+embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 openai_llm = ChatOpenAI(model="gpt-4o")
 docs = split_docs()
 db = create_vector_store(docs, embeddings)
@@ -470,11 +510,14 @@ book_talk_classifier = RunnableLambda(lambda x: book_talk(x, llm))
 book_related_classifier = RunnableLambda(lambda x: is_book_related(x, llm))
 classify_book_task_runnable = RunnableLambda(lambda x: classify_book_task(x, llm))
 book_task_runnable = RunnableLambda(lambda x: handle_book_task(x, llm, embeddings))
-book_recommender_classifier = RunnableLambda(lambda x: book_recommender(x, llm))
+book_recommender_classifier = RunnableLambda(lambda x: book_recommender(x, openai_llm))
 
     # Book Availability Runnables
 book_params_extractor = RunnableLambda(lambda x: get_book_params(x, llm))
 book_availability_runnable = RunnableLambda(lambda x: check_KB(x, llm, embeddings))
+
+    # Off Topic Answer Runnable
+off_topic_answer_runnable = RunnableLambda(lambda x: get_off_topic_answer(x, llm))
 
 # Branching logic to determine query path
 
@@ -485,13 +528,13 @@ book_task_branch = RunnableBranch(
      book_recommender_classifier),
     (lambda x:  "book talk"  in x["book_task"] ,
      book_talk_classifier),
-        RunnableLambda(lambda x: {"query": x["query"], "response": "Error: No valid condition matched." , "book_task" : x["book_task"]})
+        RunnableLambda(lambda x: {"query": x["query"], "response": "Sorry, I cannot help you with that since it is not book-related." , "book_task" : x["book_task"]})
 )
 
 branch_chain = RunnableBranch(
-    (lambda x: not x["is_book_related"], RunnableLambda(lambda x: {"query": x["query"], "response": "Not a book-related query."})),
+    (lambda x: not x["is_book_related"], off_topic_answer_runnable),
     (lambda x: x["is_book_related"], classify_book_task_runnable | book_task_branch),
-    RunnableLambda(lambda x: {"query": x["query"], "response": "Error: No valid condition matched."})
+    RunnableLambda(lambda x: {"query": x["query"], "response": "Sorry, I cannot help you with that since it is not book-related."})
 )
 
 # Complete processing chain
