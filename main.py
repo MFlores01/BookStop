@@ -23,7 +23,10 @@ class Book(BaseModel):
         description='The title of the book')
     author: Optional[str] = Field(
         default=None,
-        description='The author of the book'
+        description='The author of the book'),
+    tags: Optional[str] = Field(
+        default=None,
+        description='The genre or tags of a book'
     )
 
 # Initialize the environment variables
@@ -121,6 +124,7 @@ Categorize the following query into one of these book-related tasks:
         "Do you have 'Caraval' in stock?",
         "Check availability of 'Slammed'.",
         "Can I see if 'Hopeless' is available?"
+        "Are there available romance books?"
     ],
 "rent": [
         "I want to rent 'Heart Bones'.",
@@ -248,8 +252,11 @@ Query: {query}
 """
 
 GET_BOOK_PARAMS_PROMPT = """
-Extract the book title or book author in the following query. If there are none, then dont put anything.
-Example: The Hunger Games,
+Extract the book title, book author, and tags in the following query. If there are none, then dont put anything.
+
+The tags specifically refer to the genre of what the user is asking. For example: Fiction, Romance, Business
+
+If you happen to see multiple tags, format the string as follows: "<Tag1>, <Tag2>, <Tag3>". For example: "fiction, romance"
 Query: {query}
 """
 
@@ -315,11 +322,13 @@ def check_KB(query_data, llm, embeddings):
     kb_prompt = ''
 
     # Edit prompt (Query for KB Retrieving) if title/author info is available or properly extracted
-    if query_data['result'].title or query_data['result'].author:
+    if query_data['result'].title or query_data['result'].author or query_data['result'].tags:
         if query_data['result'].title:
             kb_prompt = f'Title: {query_data['result'].title}'
         if query_data['result'].author:
             kb_prompt = kb_prompt + f'\nCreator: {query_data['result'].author}'
+        if query_data['result'].tags:
+            kb_prompt = f'Tags: {query_data['result'].tags}'
     else:
         kb_prompt = query
 
@@ -332,7 +341,7 @@ def check_KB(query_data, llm, embeddings):
         prompt = f'''Given these books: 
         {retrieved}
 
-        Check if the book that the user is asking from their query is available
+        Check if the book that the user is asking from their query is available, if they are specifically asking for books of specific genres, then show them those available books.
 
         Query: {query}
         '''  # PROMPT IS STILL PARTIAL
