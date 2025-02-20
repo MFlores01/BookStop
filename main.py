@@ -123,8 +123,13 @@ Categorize the following query into one of these book-related tasks:
         "I'm interested in a book talk about 'Heart Bones'."
     ],
 "other": [
+        "Hi",
+        "Hello",
+        "How are you?",
         "I have a general question.",
         "This doesn't fall into the above categories.",
+        "Can you tell me more about it?",
+        "Tell me more about it",
         "I need help with something else."
     ]
 
@@ -322,4 +327,4 @@ while True:
     
     result = chain.invoke({"query": query})
     print(result['response'])
-    
+    gi
