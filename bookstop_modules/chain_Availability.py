@@ -89,23 +89,23 @@ Example: The Hunger Games,
 Query: {query}
 """
 
-RETRIEVE_BOOK_PROMPT = """
-
-"""
 
 # LLM FUNCTIONS
+
+# Extract the book title and parameters
 def get_book_params(query_data, llm):
     query = query_data['query']
     prompt = GET_BOOK_PARAMS_PROMPT.format(query=query)
-    chain = llm.with_structured_output(schema=Book)
+    chain = llm.with_structured_output(schema=Book) # Uses the Book Class to identify specific parameters to extract
     response = chain.invoke(prompt) 
     return {"query": query, "result": response }
 
+# Checks KB is book is available in the library or not
 def check_KB(query_data, llm, embeddings):
     query = query_data['query']
     kb_prompt = ''
 
-    # Edit prompt if title/author info is available or properly extracted
+    # Edit prompt (Query for KB Retrieving) if title/author info is available or properly extracted
     if query_data['result'].title or query_data['result'].author:
         if query_data['result'].title:
             kb_prompt = f'Title: {query_data['result'].title}'
@@ -115,7 +115,7 @@ def check_KB(query_data, llm, embeddings):
         kb_prompt = query
 
     retrieved = query_vector_store(kb_prompt, embeddings)
-    # If LLM retrieved from KB
+    # If LLM succesfully retrieved from KB
     if retrieved:
         format_retrieved = ''
         for idx, doc in enumerate(retrieved, 1):
@@ -126,11 +126,11 @@ def check_KB(query_data, llm, embeddings):
         Check if the book that the user is asking from their query is available
 
         Query: {query}
-        '''
+        '''  # PROMPT IS STILL PARTIAL
         response = llm.invoke(prompt).content
         return {"query": query, "response": response}
 
-    # Book is not available
+    # If KB does not return any results
     response = "I apologize, but it is not available in the library"
     return {"query": query, "response": response}
     
