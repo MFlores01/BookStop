@@ -8,11 +8,14 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import streamlit as st
 
-
 # Load environment variables
 load_dotenv()
 
-# Enhanced system prompt with strict instructions
+# Initialize Streamlit App
+st.set_page_config(page_title="📚 BookStop Library Chatbot", layout="wide")
+st.title("📚 BookStop Library Assistant & Book Talk Companion")
+
+# System Prompt
 SYSTEM_PROMPT = """You are a professional **library assistant** and a lively **book club companion**, specializing in book recommendations, reservations, and insightful literary discussions. You provide users with **accurate, context-aware, and engaging responses**, while also keeping the conversation fun and interactive. You adapt to the user’s language and maintain a **witty, bookish personality**—smart, charming, and slightly sassy (like Galinda from *Wicked*, but with a refined bookish touch).  
 
 ---
@@ -94,18 +97,14 @@ You serve two key roles:
 
 ---
 
-## **✨ Key Improvements**
-✅ **RICCE Applied** → Role, Instruction, Context, Constraints, Examples for clarity.  
-✅ **Memory Handling** → Bot remembers **previously mentioned books**.  
-✅ **Fun & Engaging** → Book discussions now feel lively and intelligent.  
-✅ **Better Guardrails** → No hallucinations, and it **understands vague follow-ups**.  
-
 Current library inventory:
 {context}"""
 
+# Load data
+CSV_PATH = "dataset/available_books.csv"
 
 #  Load and preprocess data
-def get_llm_response(prompt, max_tokens=100):
+def get_llm_response(prompt, max_tokens=1500):
     """Helper function to get LLM responses"""
     try:
         response = openai.chat.completions.create(
@@ -118,140 +117,126 @@ def get_llm_response(prompt, max_tokens=100):
     except Exception as e:
         print(f"Error getting LLM response: {e}")
         return "N/A"
-
+    
 def fill_missing_values(df):
-    """Fill missing metadata using LLM inference"""
+    """ Fill missing values in the dataframe"""
     for idx, row in df.iterrows():
-        # Fill missing authors
         if pd.isna(row['creators']) or row['creators'].strip() in ['', 'N/A']:
-            prompt = f"""Identify the most likely author for the book titled "{row['title']}". 
-                       Respond only with the author's full name or 'N/A' if unknown."""
+            prompt = f"""Identify the most likely author for the book titled "{row['title']}"."""
             df.at[idx, 'creators'] = get_llm_response(prompt)
-            
-        # Fill missing genres/tags
+
         if pd.isna(row.get('tags')) or row['tags'].strip() in ['', 'N/A']:
-            prompt = f"""Suggest 3-5 appropriate literary genres for the book "{row['title']}". 
-                       Respond only with comma-separated values or 'N/A' if unknown."""
+            prompt = f"""Suggest 3-5 appropriate literary genres for the book "{row['title']}"."""
             df.at[idx, 'tags'] = get_llm_response(prompt)
-            
-        # Fill missing collection
+
         if pd.isna(row.get('collection')) or row['collection'].strip() in ['', 'N/A']:
             author = row['creators'] if not pd.isna(row['creators']) else 'unknown author'
-            prompt = f"""Suggest an appropriate collection/category for the book "{row['title']}" by {author}. 
-                       Respond only with the collection name or 'N/A' if unknown."""
+            prompt = f"""Suggest an appropriate collection/category for the book "{row['title']}" by {author}."""
             df.at[idx, 'collection'] = get_llm_response(prompt)
-    
+
     return df
 
 def load_data(csv_path):
     """Load and preprocess data with LLM-based cleaning"""
+    if not os.path.exists(csv_path):
+        st.error(f"⚠️ CSV file '{csv_path}' not found!")
+        return []
+    
     df = pd.read_csv(csv_path)
-    
-    # Clean column names
     df.columns = df.columns.str.strip().str.lower()
-    
-    # Preserve unique identifiers (call_number, ddc, lcc) without modification
     required_columns = ['title', 'creators', 'collection', 'tags']
     for col in required_columns:
         if col not in df.columns:
             df[col] = 'N/A'
-    
-    # Fill missing values using LLM
     df = fill_missing_values(df)
-    
-    # Create document string
     df["document"] = df.apply(
-        lambda row: (
-            f"TITLE: {row['title']} | "
-            f"AUTHOR: {row['creators']} | "
-            f"Collection: {row['collection']} | "
-            f"Genre: {row['tags']}"
-        ),
+        lambda row: f"TITLE: {row['title']} | AUTHOR: {row['creators']} | Collection: {row['collection']} | Genre: {row['tags']}",
         axis=1
     )
-    
     return df["document"].tolist()
 
 # Initialize vector store
 def init_vector_store(documents):
     if not documents:
-        print("⚠️ Error: No book data found.")
+        st.error("⚠️ No book data found.")
         return None
-
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     vector_store = FAISS.from_texts(documents, embedding=embeddings)
     return vector_store
 
-# Retrieve documents based on query
 def retrieve_documents(query, vector_store, top_k=3):
+    """Retrieve top matching books"""
     if not isinstance(top_k, int):
         top_k = 3
     query_results = vector_store.similarity_search(query, k=int(top_k))
     return [result.page_content for result in query_results]
 
-# **NEW**: Extract book recommendations from AI's response
 def extract_books_from_response(response_text):
     """Extracts book titles from AI's response text."""
     books = []
     for line in response_text.split("\n"):
-        if "**" in line:  # Assuming book titles are bolded with "**"
-            title = line.split("**")[1]  # Extract book title
+        if "**" in line:
+            title = line.split("**")[1]  
             books.append(title)
     return books
 
-# **NEW**: Find the correct book based on user reference
 def get_book_by_index(index, last_recommendations):
     """Retrieves a book title based on its index in the recommendation list."""
     if index < len(last_recommendations):
         return last_recommendations[index]
-    return None  # If index is out of range, return None
+    return None
 
-# Main Chat Function
-def main():
-    documents = load_data("dataset/available_books.csv")
-    index = init_vector_store(documents)
-    if index is None:
-        print("Exiting: No books to process.")
-        return
+# Load books from CSV
+documents = load_data(CSV_PATH)
+index = init_vector_store(documents)
+
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "last_recommendations" not in st.session_state:
+    st.session_state.last_recommendations = []
+
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Chatbot user input
+user_query = st.chat_input("Ask me about books! 📖")
+
+if user_query:
+    st.session_state.messages.append({"role": "user", "content": user_query})
+
+    # ✅ Handle numbered book references
+    if any(x in user_query.lower() for x in ["2nd book", "second book", "3rd book", "third book"]):
+        book_index = 1 if "2nd" in user_query.lower() or "second" in user_query.lower() else 2
+        book_title = get_book_by_index(book_index, st.session_state.last_recommendations)
+        if book_title:
+            user_query = f"Tell me more about {book_title}"
+        else:
+            response_text = "Hmm, I don’t recall recommending a third book yet. Ask me for recommendations first! 📚"
+            st.chat_message("assistant").markdown(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            st.stop()
+
+    # Retrieve book recommendations
+    context = retrieve_documents(user_query, index, 3) if index else []
+    
+    messages = [
+        SystemMessage(content=SYSTEM_PROMPT.format(
+            context="\n".join(context) if context else "No books available.",
+            documents="\n".join(documents) if documents else "No books available."
+        )),
+        HumanMessage(content=user_query)
+    ]
 
     chat_model = ChatOpenAI(model="gpt-4o", temperature=0.3)
-    print("📚 BookStop Library Assistant - Ask about books!\n")
+    response = chat_model.invoke(messages)
+    
+    response_text = response.content
+    st.chat_message("assistant").markdown(response_text)
+    st.session_state.messages.append({"role": "assistant", "content": response_text})
 
-    last_recommendations = []  # Stores last recommended books
-
-    while True:
-        query = input("You: ").strip()
-        if query.lower() in ['exit', 'quit']:
-            break
-
-        # ✅ Handle numbered book references (e.g., "I like the 3rd book")
-        if any(x in query.lower() for x in ["2nd book", "second book", "3rd book", "third book", "fourth book", "fifth book", "last book"]):
-            book_index = 1 if "2nd" in query.lower() or "second" in query.lower() else 2
-            book_title = get_book_by_index(book_index, last_recommendations)
-
-            if book_title:
-                query = f"Tell me more about {book_title}"
-            else:
-                print("AI: Hmm, I don’t recall recommending a third book yet. Ask me for recommendations first! 📚")
-                continue
-
-        # Retrieve relevant books
-        context = retrieve_documents(query, index, documents)
-
-        messages = [
-            SystemMessage(content=SYSTEM_PROMPT.format(
-                context="\n".join(context) if context else "No books available.",
-                documents="\n".join(documents)
-            )),
-            HumanMessage(content=query)
-        ]
-
-        response = chat_model.invoke(messages)
-        print(f"AI: {response.content}\n")
-
-        # ✅ Extract books from AI response & store them
-        if "Here are some books" in response.content or "suggest" in response.content.lower():
-            last_recommendations = extract_books_from_response(response.content)
-
-if __name__ == "__main__":
-    main()
+    # ✅ Store last recommended books
+    if "Here are some books" in response_text or "suggest" in response_text.lower():
+        st.session_state.last_recommendations = extract_books_from_response(response_text)
