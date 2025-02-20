@@ -19,13 +19,13 @@ This is for setting up a format of which parameters to extract
 
 class Book(BaseModel):
     title: Optional[str] = Field(
-        default=None, 
+        default="", 
         description='The title of the book')
     author: Optional[str] = Field(
-        default=None,
-        description='The author of the book'),
+        default="",
+        description='The author of the book')
     tags: Optional[str] = Field(
-        default=None,
+        default="",
         description='The genre or tags of a book'
     )
 
