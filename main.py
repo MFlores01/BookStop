@@ -260,6 +260,16 @@ If you happen to see multiple tags, format the string as follows: "<Tag1>, <Tag2
 Query: {query}
 """
 
+CONFIRM_AVAILABILITY_PROMPT = """
+Given these books: 
+{retrieved}
+
+Check if the book that the user is asking from their query is available, if they are specifically asking for books of specific genres, then show them those available books.
+
+Query: {query}
+        
+"""
+
 # Define LLM functions
 
 def book_recommender(query_data, llm):
@@ -338,13 +348,7 @@ def check_KB(query_data, llm, embeddings):
         format_retrieved = ''
         for idx, doc in enumerate(retrieved, 1):
             format_retrieved += f"{idx}. {doc.page_content}\n"
-        prompt = f'''Given these books: 
-        {retrieved}
-
-        Check if the book that the user is asking from their query is available, if they are specifically asking for books of specific genres, then show them those available books.
-
-        Query: {query}
-        '''  # PROMPT IS STILL PARTIAL
+        prompt = CONFIRM_AVAILABILITY_PROMPT.format(retrieved=retrieved, query=query)
         response = llm.invoke(prompt).content
         return {"query": query, "response": response}
 
