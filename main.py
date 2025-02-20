@@ -7,7 +7,24 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 import os
 import pandas as pd
-import numpy as np
+import numpy as np 
+from pydantic import BaseModel, Field
+from typing import Optional
+
+'''
+BOOK CLASS
+
+This is for setting up a format of which parameters to extract
+'''
+
+class Book(BaseModel):
+    title: Optional[str] = Field(
+        default=None, 
+        description='The title of the book')
+    author: Optional[str] = Field(
+        default=None,
+        description='The author of the book'
+    )
 
 # Initialize the environment variables
 load_dotenv()
@@ -230,11 +247,16 @@ Current library inventory: {context}
 Query: {query}
 """
 
+GET_BOOK_PARAMS_PROMPT = """
+Extract the book title or book author in the following query. If there are none, then dont put anything.
+Example: The Hunger Games,
+Query: {query}
+"""
+
 # Define LLM functions
 
 def book_recommender(query_data, llm):
     query = query_data["query"]
-
 
     prompt = BOOK_RECOMMENDER_PROMPT.format(query=query, context=context)
     response = llm.invoke(prompt).content.strip()
@@ -279,6 +301,48 @@ def handle_book_task(query_data, llm, embeddings):
     response = llm.invoke(prompt).content.strip()
     return {"query": query, "task": task, "response": response}
 
+# Extract the book title and parameters
+def get_book_params(query_data, llm):
+    query = query_data['query']
+    prompt = GET_BOOK_PARAMS_PROMPT.format(query=query)
+    chain = llm.with_structured_output(schema=Book) # Uses the Book Class to identify specific parameters to extract
+    response = chain.invoke(prompt) 
+    return {"query": query, "result": response}
+
+# Checks KB is book is available in the library or not
+def check_KB(query_data, llm, embeddings):
+    query = query_data['query']
+    kb_prompt = ''
+
+    # Edit prompt (Query for KB Retrieving) if title/author info is available or properly extracted
+    if query_data['result'].title or query_data['result'].author:
+        if query_data['result'].title:
+            kb_prompt = f'Title: {query_data['result'].title}'
+        if query_data['result'].author:
+            kb_prompt = kb_prompt + f'\nCreator: {query_data['result'].author}'
+    else:
+        kb_prompt = query
+
+    retrieved = query_vector_store(kb_prompt, embeddings)
+    # If LLM succesfully retrieved from KB
+    if retrieved:
+        format_retrieved = ''
+        for idx, doc in enumerate(retrieved, 1):
+            format_retrieved += f"{idx}. {doc.page_content}\n"
+        prompt = f'''Given these books: 
+        {retrieved}
+
+        Check if the book that the user is asking from their query is available
+
+        Query: {query}
+        '''  # PROMPT IS STILL PARTIAL
+        response = llm.invoke(prompt).content
+        return {"query": query, "response": response}
+
+    # If KB does not return any results
+    response = "I apologize, but it is not available in the library"
+    return {"query": query, "response": response}
+
 # Initialize LLM and embeddings
 embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
@@ -293,12 +357,18 @@ classify_book_task_runnable = RunnableLambda(lambda x: classify_book_task(x, llm
 book_task_runnable = RunnableLambda(lambda x: handle_book_task(x, llm, embeddings))
 book_recommender_classifier = RunnableLambda(lambda x: book_recommender(x, openai_llm))
 
+    # Book Availability Runnables
+book_params_extractor = RunnableLambda(lambda x: get_book_params(x, llm))
+book_availability_runnable = RunnableLambda(lambda x: check_KB(x, llm, embeddings))
+
 # Branching logic to determine query path
 
 book_task_branch = RunnableBranch(
+    (lambda x: "availability"  in x["book_task"] , 
+     book_params_extractor | book_availability_runnable),
     (lambda x: "recommendation"  in x["book_task"] , 
      book_recommender_classifier),
-     (lambda x:  "book talk"  in x["book_task"] ,
+    (lambda x:  "book talk"  in x["book_task"] ,
      book_talk_classifier),
         RunnableLambda(lambda x: {"query": x["query"], "response": "Error: No valid condition matched." , "book_task" : x["book_task"]})
 )

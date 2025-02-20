@@ -21,5 +21,4 @@ langchainhub
 wikipedia
 tavily-python
 langchain_community
-faiss
 langchain-chroma
