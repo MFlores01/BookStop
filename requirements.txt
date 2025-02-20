@@ -5,11 +5,13 @@ streamlit_option_menu
 openai
 pandas
 numpy
+streamlit
+streamlit_option_menu
 python-dotenv
 langchain-openai
 langchain-anthropic
 langchain-google-genai
-
+gradio
 firestore
 tiktoken
 sentence-transformers
@@ -20,3 +22,4 @@ wikipedia
 tavily-python
 langchain_community
 faiss
+langchain-chroma
