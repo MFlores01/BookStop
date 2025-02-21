@@ -1,6 +1,6 @@
 # BookStop Library Assistant 📚
 # Developers
-1. ![Miguel Flores]([images/miguel.png](https://media.licdn.com/dms/image/v2/D5603AQHzCsQys79VXw/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1726156627180?e=1745452800&v=beta&t=YZbNNR3fOkvsLyxGg3_zIidWilmhbqTWh2qY3gvZY3k)) Miguel Flores  
+1. ![Miguel Flores]([[images/miguel.png](https://media.licdn.com/dms/image/v2/D5603AQHzCsQys79VXw/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1726156627180?e=1745452800&v=beta&t=YZbNNR3fOkvsLyxGg3_zIidWilmhbqTWh2qY3gvZY3k)](https://media.licdn.com/dms/image/v2/D5603AQHzCsQys79VXw/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1726156627180?e=1745452800&v=beta&t=YZbNNR3fOkvsLyxGg3_zIidWilmhbqTWh2qY3gvZY3k)) Miguel Flores  
 2. ![Andrei Miranda]([images/andrei.png](https://media.licdn.com/dms/image/v2/D5603AQH7F4ctmE9Vcg/profile-displayphoto-shrink_400_400/B56ZSMY_imGQAg-/0/1737522149949?e=1745452800&v=beta&t=l-n8yD4el1plvq_N_J3yfm-VSish__x_NKTQ--DaKmw)) Andrei Miranda  
 3. ![Gabrielle Torres]([images/gabrielle.png](https://media.licdn.com/dms/image/v2/D5603AQE1dk5DfdGHug/profile-displayphoto-shrink_800_800/B56ZR0tOKpHsAg-/0/1737124800105?e=1745452800&v=beta&t=82Nzf2Nej7Ev19RdWMgkwTQsv6v0H5ylr7_-PXL42BY)) Gabrielle Torres  
 4. ![Kentz Chavez]([images/kentz.png](https://media.licdn.com/dms/image/v2/D5603AQEqJ_N052vPSg/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1726317334829?e=1745452800&v=beta&t=3TQjzNn318tLUFTQWAe-JEFKkvedkcASmOe3VcUHjxk)) Kentz Chavez  
