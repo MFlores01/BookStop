@@ -1,5 +1,11 @@
 # BookStop Library Assistant 📚
- 
+# Developers
+1. Miguel Flores
+2. Andrei Miranda
+3. Gabrielle Torres
+4. Kentz Chavez
+5. Gregory Samson
+
 ## Overview
 BookStop is an AI-powered library assistant that provides book recommendations, availability checks, and engaging book discussions. Built using LangChain, OpenAI embeddings, and Gradio, this chatbot makes it easy to explore and interact with books in a dynamic way.
  
