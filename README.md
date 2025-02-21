@@ -58,14 +58,12 @@ BookStop is an AI-powered library assistant that provides book recommendations, 
  
 ## Configuration
 - **Dataset Path:** Update `file_path` in `try.py` to point to your book dataset.
-- **Vector Database:** The embeddings are stored in `db/KB_db`.
+- **Vector Database:** The embeddings are stored in `db`.
 - **Environment Variables:** Load OpenAI or Google API keys via `.env`.
  
 ## Troubleshooting
-- **Invalid color error in Gradio theme**:
-  - Replace `secondary_hue="brown"` with `secondary_hue="orange"` or remove it.
 - **FileNotFoundError for CSV**:
-  - Ensure `dataset/KB.csv` exists and is correctly formatted.
+  - Ensure `dataset` exists and is correctly formatted.
  
 ## Contributing
 - Fork the repository.
