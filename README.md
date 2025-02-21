@@ -19,7 +19,6 @@ BookStop is an AI-powered library assistant that provides book recommendations, 
  
 ## Technologies Used
 - **LangChain**: Manages LLM interactions and query classification.
-- **OpenAI & Google Generative AI**: Provides AI-powered responses.
 - **ChromaDB**: Stores vector embeddings for efficient retrieval.
 - **Gradio**: Creates an interactive web-based chat UI.
 - **Pandas & NumPy**: Handles dataset operations.
