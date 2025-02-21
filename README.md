@@ -1,10 +1,10 @@
 # BookStop Library Assistant 📚
 # Developers
-1. ![Miguel]<img src="https://raw.githubusercontent.com/MFlores01/BookStop/refs/heads/main/img/miguel.jfif" alt="Miguel" height="200"> Miguel Flores  
-2. [![Andrei Miranda](https://media.licdn.com/dms/image/v2/D5603AQH7F4ctmE9Vcg/profile-displayphoto-shrink_400_400/B56ZSMY_imGQAg-/0/1737522149949?e=1745452800&v=beta&t=l-n8yD4el1plvq_N_J3yfm-VSish__x_NKTQ--DaKmw)](https://raw.githubusercontent.com/MFlores01/BookStop/refs/heads/main/img/dreim.jfif) Andrei Miranda
-3. ![Gabrielle Torres]([images/gabrielle.png](https://media.licdn.com/dms/image/v2/D5603AQE1dk5DfdGHug/profile-displayphoto-shrink_800_800/B56ZR0tOKpHsAg-/0/1737124800105?e=1745452800&v=beta&t=82Nzf2Nej7Ev19RdWMgkwTQsv6v0H5ylr7_-PXL42BY)) Gabrielle Torres  
-4. ![Kentz Chavez]([images/kentz.png](https://media.licdn.com/dms/image/v2/D5603AQEqJ_N052vPSg/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1726317334829?e=1745452800&v=beta&t=3TQjzNn318tLUFTQWAe-JEFKkvedkcASmOe3VcUHjxk)) Kentz Chavez  
-5. ![Gregory Samson]([[images/gregory.png](https://media.licdn.com/dms/image/v2/D4E03AQGohXQjlBAPdw/profile-displayphoto-shrink_800_800/B4EZS6HK1eHUAg-/0/1738289229573?e=1745452800&v=beta&t=sTO3K041rQd0DkC8uS7uz_RpoHBQ-4BDdeMzfOQTbas)](https://media.licdn.com/dms/image/v2/D4E03AQGohXQjlBAPdw/profile-displayphoto-shrink_800_800/B4EZS6HK1eHUAg-/0/1738289229573?e=1745452800&v=beta&t=sTO3K041rQd0DkC8uS7uz_RpoHBQ-4BDdeMzfOQTbas)) Gregory Samson
+1. [Miguel Flores](https://www.linkedin.com/in/miguelcarloflores/)
+2. Andrei Miranda
+3. Gabrielle Torres  
+4. Kentz Chavez  
+5. Gregory Samson
 ## Overview
 BookStop is an AI-powered library assistant that provides book recommendations, availability checks, and engaging book discussions. Built using LangChain, OpenAI embeddings, and Gradio, this chatbot makes it easy to explore and interact with books in a dynamic way.
  
