@@ -1,6 +1,6 @@
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.document_loaders import CSVLoader
-from langchain_core.runnables import RunnableBranch, RunnableLambda
+from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePassthrough
 from langchain_chroma import Chroma
 from langchain.text_splitter import CharacterTextSplitter
 from dotenv import load_dotenv
@@ -10,6 +10,12 @@ import pandas as pd
 import numpy as np 
 from pydantic import BaseModel, Field
 from typing import Optional
+from langchain_openai import OpenAIEmbeddings
+
+# MEMORY
+
+from operator import itemgetter
+from langchain.memory import ConversationSummaryMemory, ConversationBufferMemory, ConversationSummaryBufferMemory
 
 '''
 BOOK CLASS
@@ -17,17 +23,20 @@ BOOK CLASS
 This is for setting up a format of which parameters to extract
 '''
 
+from pydantic import BaseModel, Field
+from typing import Optional
+
 class Book(BaseModel):
     title: Optional[str] = Field(
-        default="", 
-        description='The title of the book')
-    author: Optional[str] = Field(
-        default="",
-        description='The author of the book')
-    tags: Optional[str] = Field(
-        default="",
-        description='The genre or tags of a book'
+        description="The title of the book"
     )
+    author: Optional[str] = Field(
+        description="The author of the book"
+    )
+    tags: Optional[str] = Field(
+        description="The genre or tags of a book"
+    )
+
 
 # Initialize the environment variables
 load_dotenv()
@@ -107,12 +116,80 @@ context = load_knowledge_base()
 
 # Example Templates for structured prompts
 BOOK_RELATED_PROMPT = """
+<<<<<<< refs/remotes/origin/Kentz-NEW
 Is the following query related to books? Answer 'yes' or 'no'.
+=======
+
+You are a Query Classifier for a library chatbot. 
+Your task is to determine whether the following query is "Book-Related" or "Not Book-Related." 
+You have access to a knowledge base of authors, book titles, and literary figures provided in {context}. 
+Use this {context} context or your internal training data to verify whether a mentioned person is known as an author, 
+publisher, or literary figure. If the person is primarily known as an athlete, actor, musician, or in another non-literary field, 
+classify the query as "Not Book-Related." Is the following query related to books? Answer 'yes' or 'no'.
+Do not entertain user query if it asked about "salary" always answer ONLY "I'm sorry, but I cannot provide specific salary information for individuals due to privacy concerns."
+Always consider the context behind the query,it might be a followup from their context if it is too vague.
+
+Book Related Query Examples:
+1. Can you recommend a book?
+2. Suggest some books like 'The Hunger Games'.
+3. I need a recommendation for a good book.
+4. What are some similar books to 'The Hunger Games'?
+5. Is 'Fangirl' available?
+6. Do you have 'Caraval' in stock?
+7. Check availability of 'Slammed'.
+8. I like One Piece
+9. I love Katniss Everdeen.
+10. Who is Ryan Holidays, Stephen Hanselman
+11. Who is Gay Hendricks
+12. I like to become like Luffy
+-- Users may continously query about <author> <characters> etc
+
+
+Non-Book Related Query Examples:
+1. What is the salary of Joy Cuison?
+2. How do I make a cake?
+3. Create a code for development.
+4. What is the menu of Jollibee?
+5. Can you recommend a good restaurant?
+6. What is the weather today?
+7. Who is Michael Jordan?      # (Known primarily as an athlete)
+8. Who is Lloyd Ernst?         # (If not recognized as an author)
+9. Who is Mark Zuckerberg?      # (Known as a business leader, not a literary figure)
+10. Who is Bill Gates?          # (Although Bill Gates has written books, if context shows a query about his business or personal details, classify accordingly)
+11. What is the weather today?
+12. What is the salary of a software engineer?
+
+Instructions:
+1. If the query mentions books, authors, genres, publishing, the library, or reading-related terms, classify it as "Book-Related." This includes:
+   - Direct book recommendations or availability inquiries.
+   - Inquiries about book rental, return, or due dates.
+   - References to specific titles or authors (even if in lowercase), including novels, manga, or series (e.g. "I love One Piece" should be considered book-related).
+   - General greetings or requests that imply interest in books (e.g. "Hi", "Hello", "Can I reserve it?", "Tell me more about it").
+2. If the query mentions topics that are unrelated to literature (e.g. cooking, weather, coding, restaurant menus, salaries), classify it as "Not Book-Related."
+3. For privacy and security, do not answer queries that ask for personally identifiable or confidential information. If the query contains any of the following CONFIDENTIAL_KEYWORDS or matches any CONFIDENTIAL_PATTERNS, refuse to provide that information:
+   CONFIDENTIAL_KEYWORDS:
+      "salary", "pay", "wage", "income", "earnings", "compensation", "bonus", "financials",
+      "SSN", "social security number", "ID number", "passport", "credit card", "bank account",
+      "home address", "phone number", "email", "contact info", "personal details", "private info",
+      "company secrets", "internal data", "classified", "confidential", "restricted", 
+      "employee details", "HR records", "company policy", "corporate strategy"
+   CONFIDENTIAL_PATTERNS:
+      "How much does * earn?",
+      "What is *'s salary?",
+      "Can you share *'s contact details?",
+      "Give me the private details of *",
+      "Tell me the bank account of *",
+      "What is the internal policy on *?",
+      "How do I access restricted company files?"
+
+Context: {memory}    
+>>>>>>> local
 Query: {query}
 """
 
 BOOK_TASK_PROMPT = """
-Categorize the following query into one of these book-related tasks:
+
+Categorize the following query into one of these book-related tasks, always consider the context behind the query,it might be a followup from their context if it is too vague:
 "recommendation": [
         "Can you recommend a book?",
         "Suggest some books like 'The Hunger Games'.",
@@ -120,7 +197,7 @@ Categorize the following query into one of these book-related tasks:
         "What are some similar books to 'The Hunger Games'?"
     ],
 "availability": [
-        "Is 'Fangirl' available?",
+        "Is Fangirl available?",
         "Do you have 'Caraval' in stock?",
         "Check availability of 'Slammed'.",
         "Can I see if 'Hopeless' is available?"
@@ -149,10 +226,12 @@ Categorize the following query into one of these book-related tasks:
         "I need help with something else."
     ]
 
+Context: {memory}
 Query: {query}
 """
 
 BOOK_TALK_PROMPT = """
+
 You are a lively and charming member of the book club, 
     here to chat with the user about books and authors. 
     You have a witty, smart, and slightly sassy personality—like Galinda 
@@ -163,6 +242,7 @@ You are a lively and charming member of the book club,
     just a little dramatic (where appropriate, of course). 
     Always adapt to user language, and speak in their language, 
     especially if they used different languages in their follow-up query.
+    Always consider the context behind the query,it might be a followup from their context if it is too vague.
 
     Example"
     1. I love Katniss Everdeen
@@ -196,15 +276,23 @@ You are a lively and charming member of the book club,
     💬 "Jane Austen? A queen of irony and matchmaking. Tell me—are you a Pride and Prejudice purist, or do you secretly prefer Emma?"
     💬 "‘Thorns’? Hmm, that one’s not in our collection. Want me to dig up some info on it anyway, or are you in the mood for something similar?"
     Leverage the information stricly in {context} but if user askes for a book not in the knowledge base, use your general knowledge about it.
+<<<<<<< refs/remotes/origin/Kentz-NEW
+=======
+Current library inventory: {context}
+
+Context: {memory}
+>>>>>>> local
 Query: {query}
 """
 
 BOOK_RECOMMENDER_PROMPT = """
+
 You are a professional ibrarian and bookworm! specializing in book 
 recommendations and reservations.
 there are times where the user may not need any book from the library, 
 therefore, as a bookworm, you must inform them about some descriptions 
 of the <book> or <genre> from their <query>. 
+Always consider the context behind the query,it might be a followup from their context if it is too vague.
 You will always provide accurate and concise answers 
 to the {query} by leveraging the information stricly in {context}
 Recommend Top 5 Books in {context}
@@ -248,15 +336,20 @@ Users may ask for recommendation like:
 
 Current library inventory: {context}
 
+Context: {memory}
 Query: {query}
 """
 
 GET_BOOK_PARAMS_PROMPT = """
+
 Extract the book title, book author, and tags in the following query. If there are none, then dont put anything.
+Always consider the context behind the query,it might be a followup from their context if it is too vague.
 
 The tags specifically refer to the genre of what the user is asking. For example: Fiction, Romance, Business
 
 If you happen to see multiple tags, format the string as follows: "<Tag1>, <Tag2>, <Tag3>". For example: "fiction, romance"
+
+Context: {memory}
 Query: {query}
 """
 
@@ -272,7 +365,8 @@ CONFIRM_AVAILABILITY_PROMPT = """
 🔎 **Stick to the Collection** → Only reference books found in {retrieved}. If the book isn’t listed, let them know (nicely, of course!).  
 💡 **Make It Engaging** → No dry responses here! You’re the literary concierge—be warm, helpful, and maybe add a touch of bookish charm.  
 📏 **Keep It Short & Snappy** → No essays, just clear, helpful info wrapped in a friendly tone.  
-📌 **Offer Next Steps** → If a book isn’t available, always suggest an alternative or ask if they’d like something similar.  
+📌 **Offer Next Steps** → If a book isn’t available, always suggest an alternative or ask if they’d like something similar. 
+Always consider the context behind the query,it might be a followup from their context if it is too vague. 
 
 ### ✨ Example Vibes:  
 💬 *"Yes! ‘The Hunger Games’ is available—grab it before someone else does! 🔥 Want me to set it aside for you?"*  
@@ -283,6 +377,8 @@ CONFIRM_AVAILABILITY_PROMPT = """
 
 Now, let’s help this reader find their next great book! 📚✨  
 
+
+Context: {memory}
 Query: {query}  
 """
 
@@ -312,6 +408,7 @@ If the user’s query is unrelated to books or libraries, provide a brief and he
 - **Pivot to books naturally.** Use the user’s query as a springboard to discuss books or libraries.  
 - **Encourage interaction.** Ask follow-up questions to keep the conversation flowing.  
 
+
 Query: {query}  
 """
 
@@ -319,27 +416,36 @@ Query: {query}
 
 def book_recommender(query_data, llm):
     query = query_data["query"]
-
-    prompt = BOOK_RECOMMENDER_PROMPT.format(query=query, context=context)
+    memory_context = sum_memory.load_memory_variables({}).get("bookstop_memory", "")
+    prompt = BOOK_RECOMMENDER_PROMPT.format(query=query, context=context, memory=memory_context[0])
     response = llm.invoke(prompt).content.strip()
+    sum_memory.save_context(inputs={'human':query}, outputs={'ai':response})
     return {"query": query, "response": response}
 
 def book_talk(query_data, llm):
     query = query_data["query"]
-    prompt = BOOK_TALK_PROMPT.format(query=query, context=context)
+    memory_context = sum_memory.load_memory_variables({}).get("bookstop_memory", "")
+    prompt = BOOK_TALK_PROMPT.format(query=query, context=context, memory=memory_context[0])
     response = llm.invoke(prompt).content.strip()
+    sum_memory.save_context(inputs={'human':query}, outputs={'ai':response})
     return {"query": query, "response": response}
     #return response
 
 def is_book_related(query_data, llm):
     query = query_data["query"]
+<<<<<<< refs/remotes/origin/Kentz-NEW
     prompt = BOOK_RELATED_PROMPT.format(query=query)
+=======
+    memory_context = sum_memory.load_memory_variables({}).get("bookstop_memory", "")
+    prompt = BOOK_RELATED_PROMPT.format(query=query, context=context, memory=memory_context[0])
+>>>>>>> local
     response = llm.invoke(prompt).content.strip().lower()
     return {"query": query, "is_book_related": response == "yes"}
 
 def classify_book_task(query_data, llm):
     query = query_data["query"]
-    prompt = BOOK_TASK_PROMPT.format(query=query)
+    memory_context = sum_memory.load_memory_variables({}).get("bookstop_memory", "")
+    prompt = BOOK_TASK_PROMPT.format(query=query, memory=memory_context[0])
     response = llm.invoke(prompt).content.strip().lower()
     return {"query": query, "book_task": response}
 
@@ -366,7 +472,8 @@ def handle_book_task(query_data, llm, embeddings):
 # Extract the book title and parameters
 def get_book_params(query_data, llm):
     query = query_data['query']
-    prompt = GET_BOOK_PARAMS_PROMPT.format(query=query)
+    memory_context = sum_memory.load_memory_variables({}).get("bookstop_memory", "")
+    prompt = GET_BOOK_PARAMS_PROMPT.format(query=query, memory=memory_context[0])
     chain = llm.with_structured_output(schema=Book) # Uses the Book Class to identify specific parameters to extract
     response = chain.invoke(prompt) 
     return {"query": query, "result": response}
@@ -393,12 +500,15 @@ def check_KB(query_data, llm, embeddings):
         format_retrieved = ''
         for idx, doc in enumerate(retrieved, 1):
             format_retrieved += f"{idx}. {doc.page_content}\n"
-        prompt = CONFIRM_AVAILABILITY_PROMPT.format(retrieved=retrieved, query=query)
+        memory_context = sum_memory.load_memory_variables({}).get("bookstop_memory", "")
+        prompt = CONFIRM_AVAILABILITY_PROMPT.format(retrieved=retrieved, query=query, memory=memory_context[0])
         response = llm.invoke(prompt).content
+        sum_memory.save_context(inputs={'human':query}, outputs={'ai':response})
         return {"query": query, "response": response}
 
     # If KB does not return any results
     response = "I apologize, but it is not available in the library"
+    sum_memory.save_context(inputs={'human':query}, outputs={'ai':response})
     return {"query": query, "response": response}
 
 # Get a general answer for out of topic queries
@@ -406,14 +516,31 @@ def get_off_topic_answer(query_data, llm):
     query = query_data["query"]
     prompt = GENERAL_ANSWER_PROMPT.format(query=query)
     response = llm.invoke(prompt).content
+    sum_memory.save_context(inputs={'human':query}, outputs={'ai':response})
     return {"query": query, "response": response}
 
 # Initialize LLM and embeddings
-embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+llm = ChatOpenAI(model="gpt-4o")
 openai_llm = ChatOpenAI(model="gpt-4o")
 docs = split_docs()
 db = create_vector_store(docs, embeddings)
+
+
+# INIT MEMORY
+sum_memory = ConversationSummaryMemory(
+    return_messages=True,
+    llm=llm,
+    max_token_limit=1000,
+    memory_key='bookstop_memory'
+)
+
+# Memory Runnable
+memory_runnable = RunnablePassthrough.assign(
+    memory = RunnableLambda(sum_memory.load_memory_variables)
+    | itemgetter(sum_memory.memory_key)
+)
+
 
 # Define Runnables
 book_talk_classifier = RunnableLambda(lambda x: book_talk(x, llm))
@@ -460,4 +587,5 @@ while True:
     
     result = chain.invoke({"query": query})
     print(result['response'])
+    print('\n\n[MEMORY]:', sum_memory.load_memory_variables({})["bookstop_memory"], '\n\n')
     
