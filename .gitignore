@@ -1,4 +1,5 @@
 venv/
 .env
 db/
+dataset/
 application_default_credentials.json
