@@ -60,11 +60,26 @@ class BookChatbot:
     def book_recommender(self, query_data):
         """Handles book recommendation queries."""
         query = query_data["query"]
-        memory_context = self.fetch_memory_context()
-        prompt = PromptTemplates.book_recommendation_prompt(query=query, memory=memory_context)
-        #print('[PROMPT DEBUG]:', prompt)  # Debugging log
-        response = self.llm.invoke(prompt).content.strip()
-        return {"query": query, "response": response}
+        book_details = query_data.get('result', Book())
+
+        # Construct KB query
+        details = [
+            f'Title: {book_details.title}' if book_details.title else "",
+            f'Creator: {book_details.author}' if book_details.author else "",
+            f'Tags: {book_details.tags}' if book_details.tags else ""
+        ]
+        kb_prompt = "\n".join(filter(None, details)) or query  # Default to query if no details
+
+        retrieved = self.vector_store.query_vector_store(kb_prompt)
+        
+        if retrieved:
+            formatted_response = "\n".join([f"{idx+1}. {doc.page_content}" for idx, doc in enumerate(retrieved)])
+            memory_context = self.fetch_memory_context()
+            prompt = PromptTemplates.book_recommendation_prompt(retrieved=formatted_response, query=query, memory=memory_context)
+            response = self.llm.invoke(prompt).content
+            return {"query": query, "response": response}
+        
+        return {"query": query, "response": "I'm sorry, but I couldn't find any recommendations available in the library for you."}
 
     def classify_book_task(self, query_data):
         """Classifies the user's book-related query into specific tasks."""
@@ -122,7 +137,7 @@ class BookChatbot:
             return {"query": query, "response": response}
         
         return {"query": query, "response": "I apologize, but it is not available in the library."}
-
+    
 
     def book_task_pipeline(self):
             """Defines the main chain pipeline for book-related tasks."""
