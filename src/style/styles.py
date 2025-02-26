@@ -6,7 +6,7 @@ CSS_STYLE = """
     }
     #chatbox {
         background-color: #0072BB !important;
-        color: black !important;
+        color: white !important;
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);

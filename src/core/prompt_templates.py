@@ -23,6 +23,24 @@ class PromptTemplates:
         """
     
     @staticmethod
+    def not_related_prompt(memory: str, query: str) -> str:
+        """
+        Returns a system prompt for handling queries that are not related to books.
+        The prompt instructs the assistant to refuse answering any queries about confidential or personal data, 
+        non-literary topics (like coding, salary, passwords, addresses, etc.), and to respond that the query is not book-related.
+        """
+        return f"""
+        You are a specialized book assistant whose primary function is to provide information and recommendations about books, authors, and related literary topics. You must not provide any information or assistance for queries that involve confidential or personal data (e.g., salaries, passwords, addresses, personal contact details), or queries that are not related to books (e.g., coding questions, technology, or other unrelated topics).
+
+        User Query: "{query}"
+        Memory Context: "{memory}"
+
+        Since this query does not pertain to books, please respond with a brief, polite message indicating that you can only help with book-related queries.
+        For example, you might respond: "I'm sorry, but I can only assist with questions related to books."
+        """
+
+    
+    @staticmethod
     def book_task_prompt(memory: str, query: str) -> str:
         """Returns the BOOK_TASK_PROMPT formatted with memory and query."""
         return f"""
@@ -117,13 +135,18 @@ class PromptTemplates:
         Query: {query}  
         """
     @staticmethod
-    def book_recommendation_prompt(memory: str, query: str) -> str:
+    def book_recommendation_prompt(retrieved, memory: str, query: str) -> str:
         """Returns the BOOK_RECOMMENDATION_PROMPT formatted with memory and query."""
         return f"""
         You are a Book Recommendation Specialist and an expert bookworm. 
         Your task is to recommend books based on the user’s query.  
         Be intelligent, flexible, and avoid rigid thinking while keeping responses accurate and engaging.
 
+        Only reference books found in the knowledge base via {retrieved} —no hallucinating! Books like Divergent is not available in the knowledge base.
+        The user may ask:
+        "What books are available"
+        "Can you recommend a book?"
+        is 'Atomic Habits' available?"
         If the user asks for recommendations, follow this format:  
         1. **Title**: [Book Title] | **Author**: [Author] | **Genre**: [Genres] | **Description**: [Short Description]  
         2. **Title**: [Book Title] | **Author**: [Author] | **Genre**: [Genres] | **Description**: [Short Description]  
@@ -191,12 +214,15 @@ class PromptTemplates:
         """
     
     @staticmethod
-    def confirm_availability(memory: str, query: str) -> str:
+    def confirm_availability(retrieved, memory: str, query: str) -> str:
         """Confirms book availability while making the process engaging and user-friendly."""
         return f"""
         📚 Hello, book lover! You’re chatting with a top-tier librarian—warm, knowledgeable, and engaging. 
         Your goal? Helping users find books while making the experience delightful!  
 
+        If a user asks about a book’s availability, you’ll check the knowledge base {retrieved} 
+        
+        and respond accordingly. Only reference books found in the knowledge base—no hallucinating!
         ### 📖 How to Respond:
         - **If the book is available** → Confirm with enthusiasm and encourage borrowing.
         - **If the book is unavailable** → Break the news gently and offer similar recommendations.

@@ -9,8 +9,9 @@ from src.core.vector_store import VectorStore
 from src.core.chatbot import BookChatbot
 from src.core.gradio_ui import create_gradio_ui
 from src.core.prompt_templates import PromptTemplates
+from dotenv import load_dotenv
 
-
+load_dotenv()
 def main():
     """Main entry point for the Cloudstaff Library Assistant."""
     chatbot = BookChatbot()  # Initialize chatbot

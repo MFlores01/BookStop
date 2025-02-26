@@ -20,11 +20,10 @@ def encode_image(image_path):
 LOGO_BASE64 = encode_image(LOGO_PATH)
 
 # Function to process chatbot responses
-def respond(message, history):
-    """Handles chatbot responses in the Gradio UI."""
-    query_data = {"query": message}
-    response = chatbot.main_pipeline().invoke(query_data)
-    return response["response"]
+def respond(message, chat_history):
+    # Call book_task_pipeline with the required parameters:
+    result = chatbot.book_task_pipeline(message, chat_history)
+    return result["response"]
 
 # Function to create and return the Gradio UI
 def create_gradio_ui():

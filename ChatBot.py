@@ -108,7 +108,7 @@ def query_vector_store(query, embeddings):
  
 # Initialize LLM and embeddings
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-llm = ChatOpenAI(model="gpt-4o")
+llm = ChatOpenAI(model="gpt-4o-mini")
  
 #embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 #llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
