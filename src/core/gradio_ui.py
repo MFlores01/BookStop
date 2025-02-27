@@ -52,6 +52,8 @@ def create_gradio_ui():
                 examples=[
                     "What books are available?",
                     "Can you recommend a book?",
+                    "Recommend me business and management books",
+                    "Let's talk about Harry Potter",
                     "Is 'Atomic Habits' available?",
                     "I like One Piece",
                     "Do you have romance books?",
