@@ -8,7 +8,7 @@ from langchain.chains import create_retrieval_chain
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers.ensemble import EnsembleRetriever
-from sentence_transformers import CrossEncoder
+#from sentence_transformers import CrossEncoder
 import os
 import gradio as gr
 from pydantic import BaseModel, Field

@@ -60,7 +60,8 @@ class PromptTemplates:
 
         Example 2:
         User: "Can you recommend me a book?"
-        User: *"Recommend books about slavery."*
+        User: *"Recommend books about slavery."
+        User: 
         Classification: "Book Recommendation"
 
         Example 3:
@@ -96,6 +97,7 @@ class PromptTemplates:
             Provide a book recommendation based on the user’s query.
             Examples:
             **"I want a book thats fire."** → book recommendation
+            **"Recommend a book on manga."** → book recommendation
 
         **book availability** → User asks if a book is available.
             Keywords: is there, author, available, have, stock, etc.
