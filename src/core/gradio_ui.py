@@ -22,7 +22,7 @@ LOGO_BASE64 = encode_image(LOGO_PATH)
 # Function to process chatbot responses
 def respond(message, chat_history):
     # Call book_task_pipeline with the required parameters:
-    result = chatbot.book_task_pipeline(message, chat_history)
+    result = chatbot.book_task_pipeline(message)
     return result["response"]
 
 # Function to create and return the Gradio UI

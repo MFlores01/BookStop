@@ -56,7 +56,7 @@ class VectorStore:
         retriever = BM25Retriever.from_documents(self.docs)
         retriever.k = 10  # Retrieve top 10 documents
         return retriever
-    
+
     def _create_ensemble_retriever(self):
         """Creates an ensemble retriever combining BM25 and vector retrieval."""
         vector_retriever = self.db.as_retriever(search_type="similarity", search_kwargs={"k": 10})
