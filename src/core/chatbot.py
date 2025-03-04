@@ -186,18 +186,9 @@ class BookChatbot:
         
         #input_tokens = llm_task.usage_metadata.get("input_tokens", 0) if hasattr(llm_task, "usage_metadata") else 0
         #output_tokens = llm_task.usage_metadata.get("output_tokens", 0) if hasattr(llm_task, "usage_metadata") else 0
-        print(f"Tokens Used - Input: {input_tokens}, Output: {output_tokens}")  # Debugging
+        #print(f"Tokens Used - Input: {input_tokens}, Output: {output_tokens}")  # Debugging
         print(f"[HYBRID CLASSIFICATION DEBUG] Query: '{query}' | Rule: '{rule_task}' | Final: '{final_task}'")
         return {"query": query, "book_task": final_task}
-   
-    def get_book_params(self, query_data):
-        """Extracts structured book parameters (title, author, tags) from a query."""
-        query = query_data["query"].strip().lower()
-        prompt = PromptTemplates.get_book_params_prompt(query=query)
-        chain = self.llm.with_structured_output(schema=Book)
-        response = chain.invoke(prompt)
-        return {"query": query, "result": response}
- 
  
     def check_KB(self, query_data):
         """Checks if a book is available in the knowledge base."""
