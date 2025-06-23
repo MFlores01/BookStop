@@ -2,7 +2,8 @@
  
 ## Overview
 BookStop is an AI-powered library assistant that provides book recommendations, availability checks, and engaging book discussions. Built using LangChain, OpenAI embeddings, and Gradio, this chatbot makes it easy to explore and interact with books in a dynamic way.
-(https://github.com/MFlores01/BookStop/blob/main/src/assets/Book%20stop%20App%20Screenshot.png)
+
+![Bookstop Chatbot Screenshot](https://github.com/MFlores01/BookStop/blob/main/src/assets/Book%20stop%20App%20Screenshot.png)
 
 ## Features
 - 📖 **Book Recommendations**: Get personalized book suggestions based on genres, authors, or themes.
